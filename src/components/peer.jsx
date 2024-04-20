@@ -1,172 +1,227 @@
-import React, { useState, useEffect, useRef } from "react";
-import Peer from "peerjs";
+import React, { useEffect, useRef, useState } from 'react';
+import Peer from 'peerjs';
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import { Button } from 'react-bootstrap';
+import { Paperclip, Phone, PhoneVibrate } from "react-bootstrap-icons";
+import "bootstrap/dist/css/bootstrap.min.css";
 
-const ClientA = () => {
-  const [peerA, setPeerA] = useState(null);
-  const [peerB, setPeerB] = useState(null);
-  const [connection, setConnection] = useState(null);
-  const [message, setMessage] = useState("");
-  const [Recmessage, setRecMessage] = useState(0);
-  const [room, setroomid] = useState("");
-  const [myId, setMyId] = useState("");
-  const [stream, setStream] = useState();
-  const [Remstream, setRemStream] = useState();
-  const myVideo = useRef();
-  const RemVideo = useRef();
-  const RoomRef = useRef();
+// import './App.css';
+
+function App() {
+  const [peerId, setPeerId] = useState('');
+  const [remotePeerIdValue, setRemotePeerIdValue] = useState('');
+  const remoteVideoRef = useRef(null);
+  const currentUserVideoRef = useRef(null);
+  const peerInstance = useRef(null);
 
   useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: false })
-      .then((currentStream) => {
-        setStream(currentStream);
-        setTimeout(() => {
-          myVideo.current.srcObject = currentStream;
-        }, 1);
-      })
-      .catch((error) => {
-        console.error("Error accessing media devices:", error);
-      });
-    function again(add) {
-      if (Recmessage<2){
-      setTimeout(() => {
-        const call = peer.call(add, myVideo.current.srcObject);
-        setRecMessage((prev)=>prev + 1)
-        console.log(
-          
-          "I am calling a, ",
-          myVideo.current.srcObject,
-          stream
-        );
-      }, 5000);
-    }
-  }
-    // socket.on("me", (id) => setMyId(id));
+    const peer = new Peer();
 
-    // socket.on("callUser", ({ userToCall, from, name }) => {
-
-    // setCall({ isReceivingCall: true, from, name: callerName, signal });
-    // });
-
-    const peer = new Peer({ initiator: true, trickle: false }); // Create Peer instance for Client A
-    setPeerA(peer);
-
-    peer.on("open", (myId) => {
-      setMyId(myId);
-      console.log("Client A ID:", myId);
+    peer.on('open', (id) => {
+      setPeerId(id)
     });
 
-    peer.on("call", (incomingCall) => {
-      console.log("i am incoming call", );
-      incomingCall.answer(); // Answer the call
-      incomingCall.on("stream", (remoteStream) => {
-        // Handle incoming media stream
-        console.log("i am recieved call");
-        setRemStream(remoteStream);
-        RemVideo.current.srcObject = remoteStream;
-        console.log(Recmessage,'messssssssssssss')
-        if(Recmessage<2) again(incomingCall.peer);
-       
-      });
-    });
+    peer.on('call', (call) => {
 
-    peer.on("connection", (conn) => {
-      console.log("Connected to Client B:", conn.peer);
-      setConnection(conn);
-      // setRecMessage(conn.peer);
-
-      conn.on("data", (data) => {
-        console.log("Received data from Client B:", data);
-        // setRecMessage(data);
+      var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+       getUserMedia({ video: true, audio: true }, (mediaStream) => {
+        currentUserVideoRef.current.srcObject = mediaStream;
+        currentUserVideoRef.current.play();
+        call.answer(mediaStream)
+        call.on('stream', function(remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream
+          remoteVideoRef.current.play();
+        });
       });
-    });
-    console.log(peerA, "evetn peer", peer);
+    })
+
+    peerInstance.current = peer;
     return () => {
-      if (peer) {
-        peer.destroy(); // Clean up Peer instance
-      }
-    };
-  }, []);
+            if (peer) {
+              peer.destroy(); // Clean up Peer instance
+            }
+          };
+  }, [])
 
-  const handleConnect = (d) => {
-
-    console.log( "room");
-    // // socket.emit("callUser", { userToCall: room, from: myId, name: "user1" });
-    console.log( "peer");
-    // peer.on("open", (myId) => {
-    //   setMyId(myId);
-    //   console.log("Client A ID:", myId);
-    // });
-    if (Recmessage<2){
-
-    setTimeout(() => {
-      const call = peerA.call(d, stream);
-      console.log("I am calling ");
-      setRecMessage((prev)=>prev + 1)
-
-    }, 2000);}
-  };
-  const handleSend = () => {
-    console.log("i am sending-----1");
-
-    if (connection) {
-      console.log("i am sending------2", myId);
-      connection.send(message); // Send message to Client A
-      // connection.send(message); // Send message to Client A
+  function shareData() {
+   
+        navigator.share({
+            title: 'my room id',
+            text:{peerId},
+            // url: 'https://example.com',
+        })
+        .then(() => console.log('Successful share'))
+        .catch((error) => console.log('Error sharing', error));
     }
-  };
 
-  const handleReverse = (id) => {
-    console.log(peerA, "peerA", peer);
+  const call = (remotePeerId) => {
+    var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
-    peerA.on("open", (myId) => {
-      console.log("Client A ID:", myId);
-      console.log(id, "id", myId);
-      let conn2 = peerA.connect(id);
+    getUserMedia({ video: true, audio: true }, (mediaStream) => {
 
-      setTimeout(() => {
-        const call = peerA.call(id, stream);
-        console.log("I am calling reverse");
-      }, 5000);
+      currentUserVideoRef.current.srcObject = mediaStream;
+      currentUserVideoRef.current.play();
+
+      const call = peerInstance.current.call(remotePeerId, mediaStream)
+
+      call.on('stream', (remoteStream) => {
+        remoteVideoRef.current.srcObject = remoteStream
+        remoteVideoRef.current.play();
+      });
     });
-  };
+  }
 
-  
   return (
-    <div>
-      <h2>client</h2>
-      <h2>{myId}</h2>
-      {/* <h2>{peerA}</h2> */}
-      {/* <h2>{connection}</h2> */}
-      <video ref={myVideo} autoPlay style={{ height: "50px" }} />
-      <video ref={RemVideo} autoPlay style={{ height: "50px" }} />
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          handleConnect(room);
-        }}
-      >
-        Connect to client B {room}
-      </button>
-      <br />
-
-      <input
-        type="text"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-      />
-      <input
-        type="text"
-        value={room}
-        onChange={(e) => {
-          setroomid(e.target.value);
-          console.log(room);
-        }}
-      />
-      <button onClick={handleSend}>Send Message to Client B</button>
-      {/* <button onClick={handleConnect}>connect to Client B</button> */}
+    <div className="App"  > 
+      {/* <h1>{peerId}</h1> */}
+       <CopyToClipboard text={peerId}
+       onCopy={() =>alert('suceessfully copied')}>
+              <button >
+               <Paperclip/>Copy My ID
+              </button>
+            </CopyToClipboard>
+            <button onClick={shareData}>Share My ID</button>
+            <br/>
+      <input type="text" value={remotePeerIdValue} onChange={e => setRemotePeerIdValue(e.target.value)} />
+      <button className='m-2' onClick={() => call(remotePeerIdValue)}><Phone/>Call</button>
+      <div>
+        <video style={{width:'100%',height:'100%'}} ref={currentUserVideoRef} />
+      </div>
+      <div>
+        <video  style={{width:'100%',height:'100%'}} ref={remoteVideoRef} />
+      </div>
+      <button>end</button>
     </div>
   );
-};
+}
 
-export default ClientA;
+export default App;
+
+
+
+
+
+// import React, { useState, useEffect, useRef } from "react";
+// import Peer from "peerjs";
+
+// const ClientA = () => {
+//   const [peerA, setPeerA] = useState(null);
+//   const [connection, setConnection] = useState(null);
+//   const [message, setMessage] = useState("");
+//   const [Recmessage, setRecMessage] = useState(false);
+//   const [room, setroomid] = useState("");
+//   const [myId, setMyId] = useState("");
+//   const [stream, setStream] = useState();
+//   const [Remstream, setRemStream] = useState();
+//   const myVideo = useRef();
+//   const RemVideo = useRef();
+//   const RoomRef = useRef();
+
+//   useEffect(() => {
+//     const peer = new Peer({ initiator: true, trickle: false }); // Create Peer instance for Client A
+//     setPeerA(peer);
+
+
+//     peer.on("call", (incomingCall) => {
+//       console.log("i am incoming call");
+
+//       console.log("Answer the call", stream);
+//       incomingCall.answer(currentStream);
+//       incomingCall.on("stream", (remoteStream) => {
+//         // Handle incoming media stream
+//         // setRemStream(remoteStream);
+//         RemVideo.current.srcObject = remoteStream;
+//         // setRecMessage(true)
+//         console.log(Recmessage, "recieved wala calling again");
+//         if (Recmessage == false) {
+//           // again(incomingCall.peer, peer);
+//         }
+//       });
+//     });
+
+//     navigator.mediaDevices
+//       .getUserMedia({ video: true, audio: false })
+//       .then((currentStream) => {
+//         setTimeout(() => {
+//           setStream(currentStream);
+//           myVideo.current.srcObject = currentStream;
+//         }, 4000);
+//       })
+//       .catch((error) => {
+//         console.error("Error accessing media devices:", error);
+//         alert('"Error accessing media devices:"');
+//       });
+
+//     peer.on("open", (myId) => {
+//       // setMyId(myId);
+//       console.log("Client A ID:", myId);
+//     });
+
+   
+//     return () => {
+//       if (peer) {
+//         peer.destroy(); // Clean up Peer instance
+//       }
+//     };
+//   }, []);
+
+//   function again(add, peer) {
+//     setRecMessage((prev) => !prev);
+//     setTimeout(() => {
+//       console.log(Recmessage, "ye again wala  calling");
+//       const call = peer.call(add, myVideo.current.srcObject);
+//       console.log("I am calling a, ", myVideo.current.srcObject, stream);
+//     }, 5000);
+//   }
+
+//   const handleConnect = (d) => {
+//     if (Recmessage == false) {
+//       setRecMessage((prev) => !prev);
+//       console.log(Recmessage, "first connection");
+
+//       setTimeout(() => {
+//         const call = peerA.call(d, stream);
+//         console.log("I am calling ", peerA, d, stream);
+//         console.log(Recmessage, "first connect ke ander");
+//       }, 2000);
+//     }
+//   };
+
+//   return (
+//     <div>
+//       <h2>client</h2>
+//       <h2>{myId}</h2>
+//       {/* <h2>{peerA}</h2> */}
+//       {/* <h2>{connection}</h2> */}
+//       <video ref={myVideo} autoPlay style={{ height: "50px" }} />
+//       <video ref={RemVideo} autoPlay style={{ height: "50px" }} />
+//       <button
+//         onClick={(e) => {
+//           e.preventDefault();
+//           handleConnect(room);
+//         }}
+//       >
+//         Connect to {room}
+//       </button>
+//       <br />
+//       {/* 
+//       <input
+//         type="text"
+//         value={message}
+//         onChange={(e) => setMessage(e.target.value)}
+//       /> */}
+//       <input
+//         type="text"
+//         value={room}
+//         onChange={(e) => {
+//           setroomid(e.target.value);
+//           console.log(room);
+//         }}
+//       />
+//       {/* <button onClick={handleSend}>Send Message to Client B</button> */}
+//       {/* <button onClick={handleConnect}>connect to Client B</button> */}
+//     </div>
+//   );
+// };
+
+// export default ClientA;

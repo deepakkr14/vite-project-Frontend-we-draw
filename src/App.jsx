@@ -1,9 +1,11 @@
-import { useLayoutEffect, useState, useEffect } from "react";
+import React, { useLayoutEffect, useState, useEffect, useRef } from "react";
 import { Tldraw, createTLStore, defaultShapeUtils, throttle } from "tldraw";
 import "tldraw/tldraw.css";
-import VideoPlayer from "./components/Myvideo";
-import Sidebar from "./components/sidebar";
-import Notifications from "./components/Events";
+import { Button } from "react-bootstrap";
+// import VideoPlayer from "./components/Myvideo";
+// import Sidebar from "./components/sidebar";
+import MessageModal from "./components/Modal";
+import Peer from "./components/peer";
 import io from "socket.io-client";
 const socket = io.connect("http://localhost:4000", {
   autoConnect: false,
@@ -11,9 +13,17 @@ const socket = io.connect("http://localhost:4000", {
 const PERSISTENCE_KEY = "example-3";
 
 export default function PersistenceExample() {
+  const messageRef = useRef();
+  const [chats, setChats] = useState([]);
+  const [showModal,setShow]=useState(false)
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [fooEvents, setFooEvents] = useState(localStorage.getItem(PERSISTENCE_KEY));
-
+  const [fooEvents, setFooEvents] = useState(
+    localStorage.getItem(PERSISTENCE_KEY)
+  );
+const handleShow=()=>{
+  setShow(true);
+}
+const handleClose = () => setShow(false);
   // [1]
   const [store] = useState(() =>
     createTLStore({ shapeUtils: defaultShapeUtils })
@@ -23,7 +33,8 @@ export default function PersistenceExample() {
 
   function sendMessage() {
     console.log("Button clicked");
-    // socket.emit("send_message", { message: "Hello from client" });
+
+    socket.emit("chat_message", { chat: messageRef.current.value });
   }
 
   function startConnection() {
@@ -36,24 +47,25 @@ export default function PersistenceExample() {
     console.log("connection terminated");
   }
   function clearlocal() {
-   localStorage.removeItem(PERSISTENCE_KEY)
+    localStorage.removeItem(PERSISTENCE_KEY);
     console.log("data cleared");
   }
   useEffect(() => {
-    socket.on("receive_message", (data) => {
-      alert(data.message);
+    socket.on("chat", (data) => {
+      setChats((prevChat) => [...prevChat, data.chat]);
     });
     // Register event listeners
-    socket.on("connect",()=>setIsConnected(true));
-    socket.on("disconnect",()=>setIsConnected(false));
+    socket.on("connect", () => setIsConnected(true));
+    socket.on("disconnect", () => setIsConnected(false));
 
     // Clean up event listeners
     return () => {
-      socket.off("connect",()=>setIsConnected(true));
-      socket.off("disconnect" ,()=>setIsConnected(false));
+      socket.off("chat");
+      socket.off("connect", () => setIsConnected(true));
+      socket.off("disconnect", () => setIsConnected(false));
       socket.off("foo", setFooEvents({}));
-      stopConnection()
-      clearlocal()
+      stopConnection();
+      clearlocal();
     };
   }, [socket]);
 
@@ -61,22 +73,22 @@ export default function PersistenceExample() {
     setLoadingState({ status: "loading" });
     // var persistedSnapshot = localStorage.getItem(PERSISTENCE_KEY);
     // console.log(fooEvents,'raw')
-    console.log(JSON.parse(fooEvents))
-    socket.on("foo", (value)=>{ localStorage.setItem(PERSISTENCE_KEY, value.message);
-  
-      setFooEvents(()=>JSON.parse(value.message))
+    console.log(JSON.parse(fooEvents));
+    socket.on("foo", (value) => {
+      localStorage.setItem(PERSISTENCE_KEY, value.message);
+
+      setFooEvents(() => JSON.parse(value.message));
       store.loadSnapshot(JSON.parse(value.message));
       // store.loadSnapshot(JSON.parse(fooEvents));
     });
     // Get persisted data from local storage
-    var persistedSnapshot = fooEvents
-console.log(JSON.parse(fooEvents), 'persisted')
- 
+    var persistedSnapshot = fooEvents;
+    console.log(JSON.parse(fooEvents), "persisted");
+
     if (persistedSnapshot) {
       try {
         // const snapshot = JSON.parse(fooEvents);
         const snapshot = JSON.parse(persistedSnapshot);
-        console.log('i am running')
         store.loadSnapshot(snapshot);
         setLoadingState({ status: "ready" });
       } catch (error) {
@@ -90,14 +102,10 @@ console.log(JSON.parse(fooEvents), 'persisted')
     const cleanupFn = store.listen(
       throttle(() => {
         const snapshot = store.getSnapshot();
-        setFooEvents(()=>store.getSnapshot())
-        console.log(store.getSnapshot(), "my stoeree");
-
-        console.log(JSON.parse(fooEvents),'-------------')
-console.log('sent',snapshot)
-        socket.emit("send_message", { message:JSON.stringify(snapshot) });
+        setFooEvents(() => store.getSnapshot());
+        socket.emit("send_message", { message: JSON.stringify(snapshot) });
         // localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
-      }, 5000)
+      }, 1)
     );
 
     return () => {
@@ -125,12 +133,14 @@ console.log('sent',snapshot)
 
   return (
     <div className="tldraw__editor">
-      <div style={{ position: "absolute", inset: 1, height: "100px" }}>
-        {/* <Tldraw store={store} /> */}
+      <div
+        style={{ position: "absolute", inset: 1, height: "75%", width: "75%" }}
+      >
+        <Tldraw store={store} />
         {/* </div> */}
         {/* <div  style={{ position: "absolute", inset: '35px', height: "500px" }}> */}
         <p>Connection State: {isConnected ? "Connected" : "Disconnected"}</p>
-        <input placeholder="Message" />
+        <input placeholder="Message" ref={messageRef} />
         <button onClick={sendMessage}>Send message</button>
         <button onClick={startConnection} disabled={isConnected}>
           connect
@@ -138,14 +148,33 @@ console.log('sent',snapshot)
         <button onClick={stopConnection} disabled={!isConnected}>
           disconnect
         </button>
-        <button onClick={clearlocal} >
-         clear
-        </button>
-        <VideoPlayer />
-      <Sidebar>
-        <Notifications />
-      </Sidebar>
+        <button onClick={clearlocal}>clear</button>
+        <MessageModal/>
+        {/* <Button variant="primary" status={showModal}  >
+        Open Message Modal
+      </Button> */}
+        {/* <ul>
+          {chats.map((items) => {
+            return <li>{items}</li>;
+          })}
+        </ul> */}
       </div>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          height: "75%",
+          width: "25%",
+          marginLeft: "76%",
+        }}
+      >
+        <Peer />
+      </div>
+
+      {/* <VideoPlayer /> */}
+      {/* <Sidebar> */}
+      {/* <Notifications /> */}
+      {/* </Sidebar> */}
     </div>
   );
 }
