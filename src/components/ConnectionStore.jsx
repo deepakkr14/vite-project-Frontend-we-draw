@@ -4,7 +4,7 @@ import Peer from "peerjs";
 
 const SocketContext = createContext();
 
-const socket = io("http://localhost:5000");
+const socket = io(import.meta.env.VITE_REACT_APP_URL);
 // const socket = io('https://warm-wildwood-81069.herokuapp.com');
 
 const ContextProvider = ({ children }) => {

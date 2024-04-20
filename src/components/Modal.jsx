@@ -1,29 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
-
-const Modals = ({ status }) => {
+import { socket } from "../App";
+function MessageModal() {
+  const [show, setShow] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const modalBodyRef = useRef(null);
 
   useEffect(() => {
-    if (modalBodyRef.current) {
-      modalBodyRef.current.scrollTop = modalBodyRef.current.scrollHeight;
-    }
-  }, [messages]);
+    console.log("use effive runnign");
+    socket.on("chat", (data) => {
+      setMessages((prevChat) => [...prevChat, data.chat]);
+      console.log(messages);
+    });
 
+    return () => {
+      socket.on("chat", () => setMessages([...prevChat]));
+    };
+  }, []);
+
+  const handleShow = () => setShow(true);
+  const handleClose = () => setShow(false);
   const handleSend = () => {
-    setMessages([...messages, message]);
+    // setMessages([...messages, message]);
+ 
     setMessage("");
   };
 
   return (
-    <div>
-      <Modal id="messageModal" show={status} ref={modalBodyRef}>
+    <>
+      <Button variant="primary" onClick={handleShow}>
+        Open Message Modal
+      </Button>
+
+      <Modal id="messageModal" show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Messages</Modal.Title>
         </Modal.Header>
-        <Modal.Body ref={modalBodyRef}>
+        <Modal.Body id="modal-body">
           {messages.map((msg, index) => (
             <p key={index}>{msg}</p>
           ))}
@@ -40,26 +53,8 @@ const Modals = ({ status }) => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
-  )
+    </>
+  );
 }
 
-export default Modals;
-
-
-
-// import React, { useContext } from 'react';
-// import { Button } from 'react-bootstrap';
-// import 'bootstrap/dist/css/bootstrap.min.css';
-// import { SocketContext } from './ConnectionStore';
-
-// const Notifications = () => {
-//   const { answerCall, call, callAccepted } = useContext(SocketContext);
-//   return (
-//     <>
-
-//     </>
-//   );
-// };
-
-// export default Notifications;
+export default MessageModal;

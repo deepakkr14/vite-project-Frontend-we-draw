@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Peer from 'peerjs';
+import React, { useEffect, useRef, useState } from "react";
+import Peer from "peerjs";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { Button } from 'react-bootstrap';
+import { Button } from "react-bootstrap";
 import { Paperclip, Phone, PhoneVibrate } from "react-bootstrap-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // import './App.css';
 
 function App() {
-  const [peerId, setPeerId] = useState('');
-  const [remotePeerIdValue, setRemotePeerIdValue] = useState('');
+  const [peerId, setPeerId] = useState("");
+  const [remotePeerIdValue, setRemotePeerIdValue] = useState("");
   const remoteVideoRef = useRef(null);
   const currentUserVideoRef = useRef(null);
   const peerInstance = useRef(null);
@@ -17,89 +17,102 @@ function App() {
   useEffect(() => {
     const peer = new Peer();
 
-    peer.on('open', (id) => {
-      setPeerId(id)
+    peer.on("open", (id) => {
+      setPeerId(id);
     });
 
-    peer.on('call', (call) => {
-
-      var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-       getUserMedia({ video: true, audio: true }, (mediaStream) => {
+    peer.on("call", (call) => {
+      var getUserMedia =
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia;
+      getUserMedia({ video: true, audio: true }, (mediaStream) => {
         currentUserVideoRef.current.srcObject = mediaStream;
         currentUserVideoRef.current.play();
-        call.answer(mediaStream)
-        call.on('stream', function(remoteStream) {
-          remoteVideoRef.current.srcObject = remoteStream
+        call.answer(mediaStream);
+        call.on("stream", function (remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream;
           remoteVideoRef.current.play();
         });
       });
-    })
+    });
 
     peerInstance.current = peer;
     return () => {
-            if (peer) {
-              peer.destroy(); // Clean up Peer instance
-            }
-          };
-  }, [])
+      if (peer) {
+        peer.destroy(); // Clean up Peer instance
+      }
+    };
+  }, []);
 
   function shareData() {
-   
-        navigator.share({
-            title: 'my room id',
-            text:{peerId},
-            // url: 'https://example.com',
-        })
-        .then(() => console.log('Successful share'))
-        .catch((error) => console.log('Error sharing', error));
-    }
+    navigator
+      .share({
+        title: "my room id",
+        text: { peerId },
+        // url: 'https://example.com',
+      })
+      .then(() => console.log("Successful share"))
+      .catch((error) => console.log("Error sharing", error));
+  }
 
   const call = (remotePeerId) => {
-    var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    var getUserMedia =
+      navigator.getUserMedia ||
+      navigator.webkitGetUserMedia ||
+      navigator.mozGetUserMedia;
 
     getUserMedia({ video: true, audio: true }, (mediaStream) => {
-
       currentUserVideoRef.current.srcObject = mediaStream;
       currentUserVideoRef.current.play();
 
-      const call = peerInstance.current.call(remotePeerId, mediaStream)
+      const call = peerInstance.current.call(remotePeerId, mediaStream);
 
-      call.on('stream', (remoteStream) => {
-        remoteVideoRef.current.srcObject = remoteStream
+      call.on("stream", (remoteStream) => {
+        remoteVideoRef.current.srcObject = remoteStream;
         remoteVideoRef.current.play();
       });
     });
-  }
+  };
 
   return (
-    <div className="App"  > 
+    <div className="App">
       {/* <h1>{peerId}</h1> */}
-       <CopyToClipboard text={peerId}
-       onCopy={() =>alert('suceessfully copied')}>
-              <button >
-               <Paperclip/>Copy My ID
-              </button>
-            </CopyToClipboard>
-            <button onClick={shareData}>Share My ID</button>
-            <br/>
-      <input type="text" value={remotePeerIdValue} onChange={e => setRemotePeerIdValue(e.target.value)} />
-      <button className='m-2' onClick={() => call(remotePeerIdValue)}><Phone/>Call</button>
+      <CopyToClipboard
+        text={peerId}
+        onCopy={() => alert("suceessfully copied")}
+      >
+        <button>
+          <Paperclip />
+          Copy My ID
+        </button>
+      </CopyToClipboard>
+      <button onClick={shareData}>Share My ID</button>
+      <br />
+      <input
+        type="text"
+        value={remotePeerIdValue}
+        onChange={(e) => setRemotePeerIdValue(e.target.value)}
+      />
+      <button className="m-2" onClick={() => call(remotePeerIdValue)}>
+        <Phone />
+        Call
+      </button>
       <div>
-        <video style={{width:'100%',height:'100%'}} ref={currentUserVideoRef} />
+        <video
+          style={{ width: "100%", height: "100%" }}
+          ref={currentUserVideoRef}
+        />
       </div>
       <div>
-        <video  style={{width:'100%',height:'100%'}} ref={remoteVideoRef} />
+        <video style={{ width: "100%", height: "100%" }} ref={remoteVideoRef} />
       </div>
-      <button>end</button>
+      <Button className=" btn-danger" onClick={() => window.location.reload()}>end</Button>
     </div>
   );
 }
 
 export default App;
-
-
-
-
 
 // import React, { useState, useEffect, useRef } from "react";
 // import Peer from "peerjs";
@@ -120,7 +133,6 @@ export default App;
 //   useEffect(() => {
 //     const peer = new Peer({ initiator: true, trickle: false }); // Create Peer instance for Client A
 //     setPeerA(peer);
-
 
 //     peer.on("call", (incomingCall) => {
 //       console.log("i am incoming call");
@@ -157,7 +169,6 @@ export default App;
 //       console.log("Client A ID:", myId);
 //     });
 
-   
 //     return () => {
 //       if (peer) {
 //         peer.destroy(); // Clean up Peer instance
@@ -204,7 +215,7 @@ export default App;
 //         Connect to {room}
 //       </button>
 //       <br />
-//       {/* 
+//       {/*
 //       <input
 //         type="text"
 //         value={message}

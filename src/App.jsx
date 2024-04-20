@@ -1,21 +1,17 @@
 import React, { useLayoutEffect, useState, useEffect, useRef } from "react";
 import { Tldraw, createTLStore, defaultShapeUtils, throttle } from "tldraw";
 import "tldraw/tldraw.css";
-import { Button } from "react-bootstrap";
-// import VideoPlayer from "./components/Myvideo";
-// import Sidebar from "./components/sidebar";
 import MessageModal from "./components/Modal";
 import Peer from "./components/peer";
 import io from "socket.io-client";
-const socket = io.connect("http://localhost:4000", {
+export const socket = io.connect("http://localhost:4000"||import.meta.env.VITE_REACT_APP_URL, {
   autoConnect: false,
 });
 const PERSISTENCE_KEY = "example-3";
 
 export default function PersistenceExample() {
   const messageRef = useRef();
-  const [chats, setChats] = useState([]);
-  const [showModal,setShow]=useState(false)
+  // const [chats, setChats] = useState([]);
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [fooEvents, setFooEvents] = useState(
     localStorage.getItem(PERSISTENCE_KEY)
@@ -31,11 +27,11 @@ const handleClose = () => setShow(false);
   // [2]
   const [loadingState, setLoadingState] = useState({ status: "loading" });
 
-  function sendMessage() {
-    console.log("Button clicked");
+  // function sendMessage(message) {
+  //   console.log("Button clicked",message);
 
-    socket.emit("chat_message", { chat: messageRef.current.value });
-  }
+  //   socket.emit("chat_message", { chat: message });
+  // }
 
   function startConnection() {
     console.log("connection initialized");
@@ -51,39 +47,35 @@ const handleClose = () => setShow(false);
     console.log("data cleared");
   }
   useEffect(() => {
-    socket.on("chat", (data) => {
-      setChats((prevChat) => [...prevChat, data.chat]);
-    });
-    // Register event listeners
+    // socket.on("chat", (data) => {
+    //   setChats((prevChat) => [...prevChat, data.chat]);
+    //   console.log(chats)
+    // });
     socket.on("connect", () => setIsConnected(true));
     socket.on("disconnect", () => setIsConnected(false));
 
     // Clean up event listeners
     return () => {
-      socket.off("chat");
+      // socket.off("chat",()=>setChats(prevChat => [...prevChat]));
       socket.off("connect", () => setIsConnected(true));
       socket.off("disconnect", () => setIsConnected(false));
       socket.off("foo", setFooEvents({}));
       stopConnection();
-      clearlocal();
+      // clearlocal();
     };
   }, [socket]);
 
   useLayoutEffect(() => {
     setLoadingState({ status: "loading" });
-    // var persistedSnapshot = localStorage.getItem(PERSISTENCE_KEY);
-    // console.log(fooEvents,'raw')
-    console.log(JSON.parse(fooEvents));
+
     socket.on("foo", (value) => {
       localStorage.setItem(PERSISTENCE_KEY, value.message);
 
       setFooEvents(() => JSON.parse(value.message));
       store.loadSnapshot(JSON.parse(value.message));
-      // store.loadSnapshot(JSON.parse(fooEvents));
     });
     // Get persisted data from local storage
     var persistedSnapshot = fooEvents;
-    console.log(JSON.parse(fooEvents), "persisted");
 
     if (persistedSnapshot) {
       try {
@@ -137,27 +129,22 @@ const handleClose = () => setShow(false);
         style={{ position: "absolute", inset: 1, height: "75%", width: "75%" }}
       >
         <Tldraw store={store} />
-        {/* </div> */}
-        {/* <div  style={{ position: "absolute", inset: '35px', height: "500px" }}> */}
         <p>Connection State: {isConnected ? "Connected" : "Disconnected"}</p>
         <input placeholder="Message" ref={messageRef} />
         <button onClick={sendMessage}>Send message</button>
         <button onClick={startConnection} disabled={isConnected}>
-          connect
+          connect Canvas
         </button>
         <button onClick={stopConnection} disabled={!isConnected}>
-          disconnect
+          disconnect Canvas
         </button>
-        <button onClick={clearlocal}>clear</button>
-        <MessageModal/>
+        <button onClick={clearlocal}>clear local history</button>
+        <MessageModal />
+      
         {/* <Button variant="primary" status={showModal}  >
         Open Message Modal
       </Button> */}
-        {/* <ul>
-          {chats.map((items) => {
-            return <li>{items}</li>;
-          })}
-        </ul> */}
+        
       </div>
       <div
         style={{
